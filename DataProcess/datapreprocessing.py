@@ -1,7 +1,7 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-def clean_and_prepare_data(input_file):
+def clean_and_prepare_data(input_file: str, file_path: str = "./", validate_size: float = 0.3, split_test: bool = False):
     # Columns to drop
     cols_to_drop = [
         "Patient ID", "American Joint Committee on Cancer Publication Version Type",
@@ -39,7 +39,7 @@ def clean_and_prepare_data(input_file):
         "TCGA PanCanAtlas Cancer Type Acronym"
     ]
 
-    df = pd.read_csv(input_file)
+    df = pd.read_csv(file_path + input_file)
 
     df = df.drop(columns=cols_to_drop, errors="ignore")
     df = df.dropna(subset=required_cols)
@@ -47,7 +47,8 @@ def clean_and_prepare_data(input_file):
 
     # Stage encoding
     early_stage = ["STAGE I", "STAGE IA", "STAGE IB"]
-    print(df["Neoplasm Disease Stage American Joint Committee on Cancer Code"].unique())
+    #show stage types
+    #print(df["Neoplasm Disease Stage American Joint Committee on Cancer Code"].unique())
     df["Neoplasm Disease Stage American Joint Committee on Cancer Code"] = df[
         "Neoplasm Disease Stage American Joint Committee on Cancer Code"
     ].apply(lambda x: 0 if str(x).strip().upper() in early_stage else 1)
@@ -70,18 +71,27 @@ def clean_and_prepare_data(input_file):
     df = df[new_order]
 
     # Train-test split
-    train_df, test_df = train_test_split(df, test_size=0.3, random_state=42, shuffle=True)
+    train_df, validate_df = train_test_split(df, test_size=validate_size, random_state=42, shuffle=True)
+    if split_test: 
+        validate_df, test_df =  train_test_split(validate_df, test_size=0.5, random_state=42, shuffle=True)
 
     # Save files
-    df.to_csv("TCGA-LUNG_all.csv", index=False)
-    train_df.to_csv("TCGA-LUNG_train.csv", index=False)
-    test_df.to_csv("TCGA-LUNG_test.csv", index=False)
+    df.to_csv(file_path + "TCGA-LUNG_all.csv", index=False)
+    train_df.to_csv(file_path + "TCGA-LUNG_train.csv", index=False)
+    validate_df.to_csv(file_path + "TCGA-LUNG_validate.csv", index=False)
+    if split_test:
+        test_df.to_csv(file_path + "TCGA-LUNG_test.csv", index=False)
 
     print("Data processing complete.")
     print("Saved: TCGA-LUNG_all.csv (full cleaned dataset)")
-    print("Saved: TCGA-LUNG_train.csv (70% training set)")
-    print("Saved: TCGA-LUNG_test.csv (30% test set)")
-    return df, train_df, test_df
+    print(f"Saved: TCGA-LUNG_train.csv ({100 * (1 - validate_size)}% training set)")
+    if split_test:
+        print(f"Saved: TCGA-LUNG_validate.csv ({100 * (validate_size / 2)}% test set)")
+        print(f"Saved: TCGA-LUNG_test.csv ({100 * (validate_size / 2)}% test set)")
+    else:
+        print(f"Saved: TCGA-LUNG_validate.csv ({100 * (validate_size)}% test set)")
+        
+    return df, train_df, validate_df, test_df if split_test else None
 
 def compute_statistics(df, name):
     stage_pct = df['Stage'].value_counts(normalize=True) * 100
