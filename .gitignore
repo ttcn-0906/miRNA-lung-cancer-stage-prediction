@@ -4,3 +4,6 @@ TCGA-LUNG_all.csv
 TCGA-LUNG_train.csv
 TCGA-LUNG_validate.csv
 TCGA-LUNG_test.csv
+#loss png and model trained
+*.png
+*.pth
