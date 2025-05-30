@@ -80,9 +80,9 @@ def clean_and_prepare_data(input_file: str, file_path: str, split_size: float, s
     df = df[new_order]
 
     # Train-test split
-    train_df, validate_df = train_test_split(df, test_size=split_size, random_state=42, shuffle=True)
+    train_df, validate_df = train_test_split(df, test_size=split_size, random_state=None, shuffle=True)
     if split_val_test: 
-        validate_df, test_df =  train_test_split(validate_df, test_size=0.5, random_state=42, shuffle=True)
+        validate_df, test_df =  train_test_split(validate_df, test_size=0.5, random_state=None, shuffle=True)
 
     # Save files
     df.to_csv(file_path + "TCGA-LUNG_all.csv", index=False)

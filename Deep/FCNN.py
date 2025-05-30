@@ -10,12 +10,12 @@ class FCNN(nn.Module):
     def __init__(self, num_dim, num_classes):
         super(FCNN, self).__init__()
 
-        self.fc1 = nn.Linear(num_dim, 128)
-        self.bn1 = nn.BatchNorm1d(128)
+        self.fc1 = nn.Linear(num_dim, 64)
+        self.bn1 = nn.BatchNorm1d(64)
         self.relu1 = nn.ReLU()
         self.dropout1 = nn.Dropout(0.5)
 
-        self.fc2 = nn.Linear(128, 32)
+        self.fc2 = nn.Linear(64, 32)
         self.bn2 = nn.BatchNorm1d(32)
         self.relu2 = nn.ReLU()
         self.dropout2 = nn.Dropout(0.5)

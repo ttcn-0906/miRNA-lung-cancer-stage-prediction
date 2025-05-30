@@ -52,7 +52,7 @@ def plot(file_path: str, train_losses: List, val_losses: List):
     plt.grid(True, linestyle='--', alpha=0.6)
     
     plt.tight_layout()
-    plt.savefig(file_path + 'loss.png')
+    plt.savefig(file_path + 'Loss/loss.png')
     plt.close()
 
     #raise NotImplementedError
