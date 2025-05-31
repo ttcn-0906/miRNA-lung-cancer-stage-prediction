@@ -1,7 +1,10 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 
-def clean_and_prepare_data(input_file: str, file_path: str = "./", validate_size: float = 0.3, split_test: bool = False):
+RANDOM_STATE = 777
+
+def clean_and_prepare_data(input_file: str, file_path: str, split_size: float, split_val_test: bool, scaling: bool):
     # Columns to drop
     cols_to_drop = [
         "Patient ID", "American Joint Committee on Cancer Publication Version Type",
@@ -57,6 +60,19 @@ def clean_and_prepare_data(input_file: str, file_path: str = "./", validate_size
     df["Sex"] = df["Sex"].map({"Male": 1, "Female": 0}).astype(int)
     df["TCGA PanCanAtlas Cancer Type Acronym"] = df["TCGA PanCanAtlas Cancer Type Acronym"].map({"LUAD": 0, "LUSC": 1}).astype(int)
 
+    #scaling
+    if scaling:
+        #age and sex are now features
+        required_cols.remove("Diagnosis Age")
+        required_cols.remove("Sex")
+
+        required_df = df[required_cols]
+        features_df = df.drop(columns=required_cols, errors="ignore")
+        scaler = StandardScaler()
+        features_df = pd.DataFrame(scaler.fit_transform(features_df), columns=features_df.columns, index=features_df.index)
+
+        df = pd.concat([required_df, features_df], axis=1)
+
     df = df.rename(columns={
         "Sample ID": "ID",
         "Diagnosis Age": "Age",
@@ -71,33 +87,42 @@ def clean_and_prepare_data(input_file: str, file_path: str = "./", validate_size
     df = df[new_order]
 
     # Train-test split
-    train_df, validate_df = train_test_split(df, test_size=validate_size, random_state=42, shuffle=True)
-    if split_test: 
-        validate_df, test_df =  train_test_split(validate_df, test_size=0.5, random_state=42, shuffle=True)
+    train_df, validate_df = train_test_split(df, test_size=split_size, stratify=df["Stage"], random_state=RANDOM_STATE, shuffle=True)
+    if split_val_test: 
+        validate_df, test_df =  train_test_split(validate_df, test_size=0.5, stratify=validate_df["Stage"], random_state=RANDOM_STATE, shuffle=True)
 
     # Save files
     df.to_csv(file_path + "TCGA-LUNG_all.csv", index=False)
     train_df.to_csv(file_path + "TCGA-LUNG_train.csv", index=False)
     validate_df.to_csv(file_path + "TCGA-LUNG_validate.csv", index=False)
-    if split_test:
+    if split_val_test:
         test_df.to_csv(file_path + "TCGA-LUNG_test.csv", index=False)
 
     print("Data processing complete.")
     print("Saved: TCGA-LUNG_all.csv (full cleaned dataset)")
-    print(f"Saved: TCGA-LUNG_train.csv ({100 * (1 - validate_size)}% training set)")
-    if split_test:
-        print(f"Saved: TCGA-LUNG_validate.csv ({100 * (validate_size / 2)}% test set)")
-        print(f"Saved: TCGA-LUNG_test.csv ({100 * (validate_size / 2)}% test set)")
+    print(f"Saved: TCGA-LUNG_train.csv ({100 * (1 - split_size)}% training set)")
+    if split_val_test:
+        print(f"Saved: TCGA-LUNG_validate.csv ({100 * (split_size / 2)}% test set)")
+        print(f"Saved: TCGA-LUNG_test.csv ({100 * (split_size / 2)}% test set)")
     else:
-        print(f"Saved: TCGA-LUNG_validate.csv ({100 * (validate_size)}% test set)")
+        print(f"Saved: TCGA-LUNG_validate.csv ({100 * (split_size)}% test set)")
         
-    return df, train_df, validate_df, test_df if split_test else None
+    return df, train_df, validate_df, test_df if split_val_test else None
 
 def compute_statistics(df, name):
+    #age and sex become features for prediction. cannot compute statistic after scaling.
+    if type(df) != pd.DataFrame:
+        return {
+            "Dataset": name,
+            "Total Samples": 0,
+            "Stage 0 (%)": 0,
+            "Stage 1 (%)": 0,
+            "Subtype 0 (LUAD) (%)": 0,
+            "Subtype 1 (LUSC) (%)": 0,
+        }
+    
     stage_pct = df['Stage'].value_counts(normalize=True) * 100
-    sex_pct = df['Sex'].value_counts(normalize=True) * 100
     subtype_pct = df['Subtype'].value_counts(normalize=True) * 100
-    age_avg = df['Age'].mean()
     total_samples = len(df)
 
     return {
@@ -105,9 +130,6 @@ def compute_statistics(df, name):
         "Total Samples": total_samples,
         "Stage 0 (%)": stage_pct.get(0, 0),
         "Stage 1 (%)": stage_pct.get(1, 0),
-        "Sex 0 (Female) (%)": sex_pct.get(0, 0),
-        "Sex 1 (Male) (%)": sex_pct.get(1, 0),
         "Subtype 0 (LUAD) (%)": subtype_pct.get(0, 0),
         "Subtype 1 (LUSC) (%)": subtype_pct.get(1, 0),
-        "Average Age": age_avg
     }
