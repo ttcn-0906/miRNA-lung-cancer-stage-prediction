@@ -21,18 +21,19 @@ class TrainDataset(Dataset):
     
 def load_train_dataset(file_path: str)->Tuple[List, List]:
     required_labels = [
-        "ID", "Age", "Stage",
-        "Overall Survival (Months)", "Overall Survival Status", "Sex",
-        "Subtype"
+        "Age", "Sex"
     ]
     predict_labels = ["Stage"]
 
     df = pd.read_csv(file_path)
     labels = df[predict_labels].values.tolist()
+    
+    all_columns = df.columns.tolist()
+    mirna_cols = [col for col in all_columns if col.startswith("hsa-")]
 
-    df = df.drop(columns=required_labels, errors="ignore")
+    df = df[mirna_cols + required_labels]
     features = df.values.tolist()
-    #features has length 1535 mirna
+    #features has length 1535 mirna + age/sex
     
     return features, labels
 

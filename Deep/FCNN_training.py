@@ -13,12 +13,13 @@ except ImportError:
     from utils import TrainDataset, load_train_dataset, plot
 
 BATCH_SIZE = 32
-INPUT_DIM = 1535
+INPUT_DIM = 1537
 OUTPUT_SIZE = 2
 LR = 1e-5
 WEIGHT_DECAY = 1e-3
 EPOCHS = 100
 K_FOLD = 5
+RANDOM_STATE = 42
 
 def load_data(file_path: str, file_prefix: str, split_val_test: bool = False, load_all: bool = False) -> \
     tuple[list, list, list | None, list | None, list | None, list | None]:
@@ -28,7 +29,7 @@ def load_data(file_path: str, file_prefix: str, split_val_test: bool = False, lo
     logger.info("Start loading data")
     if load_all:
         train_features, train_labels = load_train_dataset(file_path + file_prefix + "all.csv")
-        train_features, train_labels = shuffle(train_features, train_labels, random_state=None)
+        train_features, train_labels = shuffle(train_features, train_labels, random_state=RANDOM_STATE)
         
         return train_features, train_labels, None, None, None, None
     
@@ -115,7 +116,7 @@ def train_k_fold(model_path: str ="./", file_path: str = "../DataProcess/", file
     train_losses = [0 for _ in range(EPOCHS)]
     val_losses = [0 for _ in range(EPOCHS)]
 
-    skf = StratifiedKFold(n_splits=K_FOLD, shuffle=True, random_state=None)
+    skf = StratifiedKFold(n_splits=K_FOLD, shuffle=True, random_state=RANDOM_STATE)
     for fold, (train_index, val_index) in enumerate(skf.split(train_features, train_labels)):
         logger.info(f"Fold: {fold+1}/{K_FOLD}")
 
@@ -151,7 +152,7 @@ def train_k_fold(model_path: str ="./", file_path: str = "../DataProcess/", file
             
             if val_acc > max_acc:
                 max_acc = val_acc
-                torch.save(model.state_dict(), model_path + "best_model.pth")
+                torch.save(model.state_dict(), model_path + "Model/best_model.pth")
                 logger.info(f"Saving model with validation accuracy: {val_acc:.4f}")
 
     logger.info(f"Best Accuracy: {max_acc:.4f}")

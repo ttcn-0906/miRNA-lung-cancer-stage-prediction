@@ -2,6 +2,8 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
+RANDOM_STATE = 777
+
 def clean_and_prepare_data(input_file: str, file_path: str, split_size: float, split_val_test: bool, scaling: bool):
     # Columns to drop
     cols_to_drop = [
@@ -46,14 +48,6 @@ def clean_and_prepare_data(input_file: str, file_path: str, split_size: float, s
     df = df.dropna(subset=required_cols)
     df = df[df["Overall Survival (Months)"] != 0]
 
-    if scaling:
-        required_df = df[required_cols]
-        mirna_df = df.drop(columns=required_cols, errors="ignore")
-        scaler = StandardScaler()
-        mirna_df = pd.DataFrame(scaler.fit_transform(mirna_df), columns=mirna_df.columns, index=mirna_df.index)
-
-        df = pd.concat([required_df, mirna_df], axis=1)
-
     # Stage encoding
     early_stage = ["STAGE I", "STAGE IA", "STAGE IB"]
     #show stage types
@@ -65,6 +59,19 @@ def clean_and_prepare_data(input_file: str, file_path: str, split_size: float, s
     df["Overall Survival Status"] = df["Overall Survival Status"].map({"0:LIVING": 0, "1:DECEASED": 1}).astype(int)
     df["Sex"] = df["Sex"].map({"Male": 1, "Female": 0}).astype(int)
     df["TCGA PanCanAtlas Cancer Type Acronym"] = df["TCGA PanCanAtlas Cancer Type Acronym"].map({"LUAD": 0, "LUSC": 1}).astype(int)
+
+    #scaling
+    if scaling:
+        #age and sex are now features
+        required_cols.remove("Diagnosis Age")
+        required_cols.remove("Sex")
+
+        required_df = df[required_cols]
+        features_df = df.drop(columns=required_cols, errors="ignore")
+        scaler = StandardScaler()
+        features_df = pd.DataFrame(scaler.fit_transform(features_df), columns=features_df.columns, index=features_df.index)
+
+        df = pd.concat([required_df, features_df], axis=1)
 
     df = df.rename(columns={
         "Sample ID": "ID",
@@ -80,9 +87,9 @@ def clean_and_prepare_data(input_file: str, file_path: str, split_size: float, s
     df = df[new_order]
 
     # Train-test split
-    train_df, validate_df = train_test_split(df, test_size=split_size, random_state=None, shuffle=True)
+    train_df, validate_df = train_test_split(df, test_size=split_size, stratify=df["Stage"], random_state=RANDOM_STATE, shuffle=True)
     if split_val_test: 
-        validate_df, test_df =  train_test_split(validate_df, test_size=0.5, random_state=None, shuffle=True)
+        validate_df, test_df =  train_test_split(validate_df, test_size=0.5, stratify=validate_df["Stage"], random_state=RANDOM_STATE, shuffle=True)
 
     # Save files
     df.to_csv(file_path + "TCGA-LUNG_all.csv", index=False)
@@ -103,23 +110,19 @@ def clean_and_prepare_data(input_file: str, file_path: str, split_size: float, s
     return df, train_df, validate_df, test_df if split_val_test else None
 
 def compute_statistics(df, name):
+    #age and sex become features for prediction. cannot compute statistic after scaling.
     if type(df) != pd.DataFrame:
         return {
             "Dataset": name,
             "Total Samples": 0,
             "Stage 0 (%)": 0,
             "Stage 1 (%)": 0,
-            "Sex 0 (Female) (%)": 0,
-            "Sex 1 (Male) (%)": 0,
             "Subtype 0 (LUAD) (%)": 0,
             "Subtype 1 (LUSC) (%)": 0,
-            "Average Age": 0
         }
     
     stage_pct = df['Stage'].value_counts(normalize=True) * 100
-    sex_pct = df['Sex'].value_counts(normalize=True) * 100
     subtype_pct = df['Subtype'].value_counts(normalize=True) * 100
-    age_avg = df['Age'].mean()
     total_samples = len(df)
 
     return {
@@ -127,9 +130,6 @@ def compute_statistics(df, name):
         "Total Samples": total_samples,
         "Stage 0 (%)": stage_pct.get(0, 0),
         "Stage 1 (%)": stage_pct.get(1, 0),
-        "Sex 0 (Female) (%)": sex_pct.get(0, 0),
-        "Sex 1 (Male) (%)": sex_pct.get(1, 0),
         "Subtype 0 (LUAD) (%)": subtype_pct.get(0, 0),
         "Subtype 1 (LUSC) (%)": subtype_pct.get(1, 0),
-        "Average Age": age_avg
     }

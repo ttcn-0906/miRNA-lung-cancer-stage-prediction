@@ -8,13 +8,12 @@ PENALTY = 'l2'
 SOLVER = 'liblinear'
 C = 1e-3
 K_FOLD = 10
+RANDOM_STATE = 42
 
 def load_data(file_path: str, file_prefix: str, load_all: bool = False):
 
     required_labels = [
-        "ID", "Age", "Stage",
-        "Overall Survival (Months)", "Overall Survival Status", "Sex",
-        "Subtype"
+        "Age", "Sex"
     ]
     predict_labels = ["Stage"]
 
@@ -22,11 +21,13 @@ def load_data(file_path: str, file_prefix: str, load_all: bool = False):
         train = pd.read_csv(file_path + file_prefix + "all.csv")
         y_train = [labels[0] for labels in train[predict_labels].values.tolist()]
 
-        train = train.drop(columns=required_labels, errors="ignore")
+        all_columns = train.columns.tolist()
+        mirna_cols = [col for col in all_columns if col.startswith("hsa-")]
 
+        train = train[mirna_cols + required_labels]
         X_train = train.values.tolist()
 
-        X_train, y_train = shuffle(X_train, y_train, random_state=None)
+        X_train, y_train = shuffle(X_train, y_train, random_state=RANDOM_STATE)
 
         return X_train, y_train, None, None
 
@@ -36,8 +37,11 @@ def load_data(file_path: str, file_prefix: str, load_all: bool = False):
     y_train = [labels[0] for labels in train[predict_labels].values.tolist()]
     y_test = [labels[0] for labels in test[predict_labels].values.tolist()]
 
-    train = train.drop(columns=required_labels, errors="ignore")
-    test = test.drop(columns=required_labels, errors="ignore")
+    all_columns = train.columns.tolist()
+    mirna_cols = [col for col in all_columns if col.startswith("hsa-")]
+
+    train = train[mirna_cols + required_labels]
+    test = test[mirna_cols + required_labels]
     
     X_train = train.values.tolist()
     X_test = test.values.tolist()
@@ -48,7 +52,7 @@ def train_fix_split(file_path: str, file_prefix: str):
 
     X_train, y_train, X_test, y_test = load_data(file_path, file_prefix)
 
-    clf = LogisticRegression(penalty=PENALTY, solver=SOLVER, C=C, max_iter=10000, random_state=None)
+    clf = LogisticRegression(penalty=PENALTY, solver=SOLVER, C=C, max_iter=10000, random_state=RANDOM_STATE)
     clf.fit(X_train, y_train)
 
     y_pred = clf.predict(X_test)
@@ -69,8 +73,8 @@ def train_k_fold(file_path: str, file_prefix: str):
     cr = None
     cm = None
 
-    sskf = StratifiedKFold(n_splits=K_FOLD, shuffle=True, random_state=None)
-    for fold, (train_index, val_index) in enumerate(sskf.split(X_train, y_train)):
+    skf = StratifiedKFold(n_splits=K_FOLD, shuffle=True, random_state=RANDOM_STATE)
+    for fold, (train_index, val_index) in enumerate(skf.split(X_train, y_train)):
         
         fold_X_train = [X_train[i] for i in train_index]
         fold_y_train = [y_train[i] for i in train_index]
@@ -78,7 +82,7 @@ def train_k_fold(file_path: str, file_prefix: str):
         fold_X_test = [X_train[i] for i in val_index]
         fold_y_test = [y_train[i] for i in val_index]
 
-        clf = LogisticRegression(penalty=PENALTY, solver=SOLVER, C=C, max_iter=10000, random_state=None)
+        clf = LogisticRegression(penalty=PENALTY, solver=SOLVER, C=C, max_iter=10000, random_state=RANDOM_STATE)
         clf.fit(fold_X_train, fold_y_train)
 
         fold_y_pred = clf.predict(fold_X_test)
@@ -103,9 +107,9 @@ def grid_search_lr_finding(file_path: str, file_prefix: str):
 
     X_all, y_all, _, _ = load_data(file_path, file_prefix, load_all=True)
 
-    skf = StratifiedKFold(n_splits=K_FOLD, shuffle=True, random_state=None)
+    skf = StratifiedKFold(n_splits=K_FOLD, shuffle=True, random_state=RANDOM_STATE)
 
-    model = LogisticRegression(random_state=None, max_iter=10000)
+    model = LogisticRegression(random_state=RANDOM_STATE, max_iter=10000)
 
     param_grid = {
         'penalty': ['l1', 'l2'],
@@ -133,8 +137,10 @@ def grid_search_lr_finding(file_path: str, file_prefix: str):
     print("=== Classification Report for best LR ===")
     print(classification_report(y_all, y_pred_best))
 
-def start(file_path: str = "../DataProcess/", file_prefix: str = "TCGA-LUNG_", k_fold: bool = True, grid_search: bool = False):
-
+def start(file_path: str = "../DataProcess/", file_prefix: str = "TCGA-LUNG_", k_fold: bool = False, grid_search: bool = False):
+    """
+    if k fold is enabled, LR model use all_data as training data. validate_data and test_data is ignored.
+    """
     if grid_search:
         grid_search_lr_finding(file_path, file_prefix)
     elif k_fold:
@@ -143,4 +149,4 @@ def start(file_path: str = "../DataProcess/", file_prefix: str = "TCGA-LUNG_", k
         train_fix_split(file_path, file_prefix)
     
 if __name__ == '__main__':
-    start(grid_search=True)
+    start(grid_search=False)
