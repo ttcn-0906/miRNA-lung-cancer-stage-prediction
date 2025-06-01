@@ -62,10 +62,6 @@ def clean_and_prepare_data(input_file: str, file_path: str, split_size: float, s
 
     #scaling
     if scaling:
-        #age and sex are now features
-        required_cols.remove("Diagnosis Age")
-        required_cols.remove("Sex")
-
         required_df = df[required_cols]
         features_df = df.drop(columns=required_cols, errors="ignore")
         scaler = StandardScaler()

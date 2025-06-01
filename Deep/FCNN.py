@@ -100,20 +100,20 @@ def validate(model: FCNN, val_loader: DataLoader, criterion, device)->Tuple[floa
 def test(model: FCNN, test_loader: DataLoader, criterion, device):
     model.eval()
     results = []
-    
+    total = 0
+    correct = 0
+
     with torch.no_grad():
-        for inputs, image_names in tqdm(test_loader, desc="Testing"):
-            inputs = inputs.to(device)
-            
+        for inputs, label_batches in tqdm(test_loader, desc="Testing"):
+            inputs, label_batches = inputs.to(device), label_batches.to(device)
+
             outputs = model(inputs)
+            stage_labels = label_batches[:, 0]
+
             _, predicted = torch.max(outputs, 1)
-            
-            for name, pred in zip(image_names, predicted.cpu().numpy()):
-                results.append({'id': name, 'prediction': int(pred)})
-    
-    df = pd.DataFrame(results)
-    df.to_csv('CNN.csv', index=False)
+            total += stage_labels.size(0)
+            correct += (predicted == stage_labels).sum().item()
 
-    print(f"Predictions saved to 'CNN.csv'")
+    accuracy = correct / total
 
-    return
+    return accuracy
