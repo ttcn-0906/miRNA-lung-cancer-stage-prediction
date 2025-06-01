@@ -19,23 +19,30 @@ class TrainDataset(Dataset):
         label = torch.tensor(self.labels[idx], dtype=torch.long)
         return feature, label
     
-def load_train_dataset(file_path: str)->Tuple[List, List]:
-    required_labels = [
-        "Age", "Sex"
-    ]
+def load_train_dataset(file_path: str, feature_list: list)->Tuple[List, List]:
     predict_labels = ["Stage"]
 
     df = pd.read_csv(file_path)
     labels = df[predict_labels].values.tolist()
-    
-    all_columns = df.columns.tolist()
-    mirna_cols = [col for col in all_columns if col.startswith("hsa-")]
 
-    df = df[mirna_cols + required_labels]
+    all_columns = df.columns.tolist()
+    if not feature_list == None:
+        mirna_cols = feature_list
+    else:
+        mirna_cols = [col for col in all_columns if col.startswith("hsa-")]
+
+    df = df[mirna_cols]
     features = df.values.tolist()
-    #features has length 1535 mirna + age/sex
+    #features has length 1535 mirna
     
     return features, labels
+
+def load_feature_list(feature_file: str):
+    df = pd.read_csv(feature_file)
+
+    feature_list = df["selected features"].values.tolist()
+
+    return feature_list
 
 def plot(file_path: str, train_losses: List, val_losses: List):
     # (TODO) Plot the training loss and validation loss of CNN, and save the plot to 'loss.png'

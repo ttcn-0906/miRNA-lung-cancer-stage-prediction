@@ -17,9 +17,6 @@ TOP_FEATURES = 200
 # === 1. Data Preprocessing ===
 def load_data(file_path: str, file_prefix: str) -> tuple[pd.DataFrame, list, pd.DataFrame, list]:
 
-    required_labels = [
-        "Age", "Sex"
-    ]
     predict_labels = ["Stage"]
 
     train = pd.read_csv(file_path + file_prefix + "train.csv")
@@ -31,8 +28,8 @@ def load_data(file_path: str, file_prefix: str) -> tuple[pd.DataFrame, list, pd.
     all_columns = train.columns.tolist()
     mirna_cols = [col for col in all_columns if col.startswith("hsa-")]
 
-    train = train[mirna_cols + required_labels]
-    test = test[mirna_cols + required_labels]
+    train = train[mirna_cols]
+    test = test[mirna_cols]
     
     X_train = train
     X_test = test
@@ -222,28 +219,22 @@ def start(file_path: str = "../DataProcess/", file_prefix: str = "TCGA-LUNG_", r
     print("Starting pipeline...")
     X_train, y_train, X_test, y_test = load_data(file_path, file_prefix)
 
-    meta_cols = ["Age", "Sex"]
-
     print("Selecting features...")
     X_train_sel, X_test_sel, selected = select_features(X_train, y_train, X_test)
 
-    #add metadata back
-    X_train_full = np.concatenate([X_train_sel, X_train[meta_cols].to_numpy()], axis=1)
-    X_test_full = np.concatenate([X_test_sel, X_test[meta_cols].to_numpy()], axis=1)
-
     print("Training model...")
     if grid_search:
-        model = find_model_param(X_train_full, y_train, X_test_full, y_test)
+        model = find_model_param(X_train_sel, y_train, X_test_sel, y_test)
     else:
-        model = train_model(X_train_full, y_train)
+        model = train_model(X_train_sel, y_train)
 
     print("Evaluating model...")
-    all_features = list(selected) + meta_cols
+    all_features = list(selected)
     if not grid_search: #uses cuda
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        X_test_full = torch.tensor(X_test_full, dtype=torch.float32).to(device)
+        X_test_sel = torch.tensor(X_test_sel, dtype=torch.float32).to(device)
 
-    evaluate_model(model, X_test_full, y_test, result_path)
+    evaluate_model(model, X_test_sel, y_test, result_path)
 
     print("Saving...")
     save_results(model, all_features, result_path)

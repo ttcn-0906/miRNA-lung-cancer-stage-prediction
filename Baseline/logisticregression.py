@@ -12,9 +12,6 @@ RANDOM_STATE = 42
 
 def load_data(file_path: str, file_prefix: str, load_all: bool = False):
 
-    required_labels = [
-        "Age", "Sex"
-    ]
     predict_labels = ["Stage"]
 
     if load_all:
@@ -24,7 +21,7 @@ def load_data(file_path: str, file_prefix: str, load_all: bool = False):
         all_columns = train.columns.tolist()
         mirna_cols = [col for col in all_columns if col.startswith("hsa-")]
 
-        train = train[mirna_cols + required_labels]
+        train = train[mirna_cols]
         X_train = train.values.tolist()
 
         X_train, y_train = shuffle(X_train, y_train, random_state=RANDOM_STATE)
@@ -40,8 +37,8 @@ def load_data(file_path: str, file_prefix: str, load_all: bool = False):
     all_columns = train.columns.tolist()
     mirna_cols = [col for col in all_columns if col.startswith("hsa-")]
 
-    train = train[mirna_cols + required_labels]
-    test = test[mirna_cols + required_labels]
+    train = train[mirna_cols]
+    test = test[mirna_cols]
     
     X_train = train.values.tolist()
     X_test = test.values.tolist()
