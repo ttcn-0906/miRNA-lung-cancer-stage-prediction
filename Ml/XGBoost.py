@@ -202,7 +202,7 @@ def save_results(model: XGBClassifier, features, result_path):
         else:
             importance_list.append(0.0)
     importance_df = pd.DataFrame({
-        'feature': features,
+        'selected features': features,
         'importance': importance_list
     }).sort_values(by='importance', ascending=False)
 
