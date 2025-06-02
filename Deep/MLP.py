@@ -6,21 +6,21 @@ from tqdm import tqdm
 from typing import Tuple
 import pandas as pd
 
-class FCNN(nn.Module):
+class MLP(nn.Module):
     def __init__(self, num_dim, num_classes):
-        super(FCNN, self).__init__()
+        super(MLP, self).__init__()
 
-        self.fc1 = nn.Linear(num_dim, 64)
-        self.bn1 = nn.BatchNorm1d(64)
+        self.fc1 = nn.Linear(num_dim, 32)
+        self.bn1 = nn.BatchNorm1d(32)
         self.relu1 = nn.ReLU()
         self.dropout1 = nn.Dropout(0.5)
 
-        self.fc2 = nn.Linear(64, 32)
-        self.bn2 = nn.BatchNorm1d(32)
+        self.fc2 = nn.Linear(32, 16)
+        self.bn2 = nn.BatchNorm1d(16)
         self.relu2 = nn.ReLU()
         self.dropout2 = nn.Dropout(0.5)
 
-        self.stage_output = nn.Linear(32, num_classes)
+        self.stage_output = nn.Linear(16, num_classes)
 
     def forward(self, x):
         x = self.dropout1(self.relu1(self.bn1(self.fc1(x))))
@@ -29,7 +29,7 @@ class FCNN(nn.Module):
     
         return x
 
-def train(model: FCNN, train_loader: DataLoader, criterion, optimizer, device)->float:
+def train(model: MLP, train_loader: DataLoader, criterion, optimizer, device)->float:
     model.train()
     running_loss = 0.0
     correct = 0
@@ -65,7 +65,7 @@ def train(model: FCNN, train_loader: DataLoader, criterion, optimizer, device)->
     return avg_loss
 
 
-def validate(model: FCNN, val_loader: DataLoader, criterion, device)->Tuple[float, float]:
+def validate(model: MLP, val_loader: DataLoader, criterion, device)->Tuple[float, float]:
     model.eval()
     running_loss = 0.0
     correct = 0
@@ -97,7 +97,7 @@ def validate(model: FCNN, val_loader: DataLoader, criterion, device)->Tuple[floa
     
     return avg_loss, accuracy
 
-def test(model: FCNN, test_loader: DataLoader, criterion, device):
+def test(model: MLP, test_loader: DataLoader, criterion, device):
     model.eval()
     results = []
     total = 0

@@ -7,10 +7,10 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.feature_selection import SelectKBest, f_classif
 from loguru import logger
 try:
-    from .FCNN import FCNN, train, validate, test
+    from .MLP import MLP, train, validate, test
     from .utils import TrainDataset, load_train_dataset, plot, load_feature_list
 except ImportError:
-    from FCNN import FCNN, train, validate, test
+    from MLP import MLP, train, validate, test
     from utils import TrainDataset, load_train_dataset, plot, load_feature_list
 
 TOP_FEATURES = 200
@@ -20,7 +20,7 @@ INPUT_DIM = 1535
 OUTPUT_SIZE = 2
 LR = 1e-4
 WEIGHT_DECAY = 1e-3
-EPOCHS = 100
+EPOCHS = 150
 K_FOLD = 5
 RANDOM_STATE = 42
 
@@ -62,11 +62,11 @@ def train_fix_split(model_path: str, file_path: str, file_prefix: str, split_val
     
     #training
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    logger.info("Start training FCNN")
+    logger.info("Start training MLP")
     train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
-    model = FCNN(TOP_FEATURES if select_k_best else INPUT_DIM, OUTPUT_SIZE).to(device)
+    model = MLP(TOP_FEATURES if select_k_best else INPUT_DIM, OUTPUT_SIZE).to(device)
     #able to handle multi-stage classification
     criterion = nn.CrossEntropyLoss()
 
@@ -120,7 +120,7 @@ def train_k_fold(model_path: str, file_path: str, file_prefix: str, test_data: b
     
     #training
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    logger.info("Start training FCNN with K-Fold")
+    logger.info("Start training MLP with K-Fold")
 
     #max_accuracy is now across folds
     max_acc = 0
@@ -143,7 +143,7 @@ def train_k_fold(model_path: str, file_path: str, file_prefix: str, test_data: b
         train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
         val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
-        model = FCNN(TOP_FEATURES if select_k_best else INPUT_DIM, OUTPUT_SIZE).to(device)
+        model = MLP(TOP_FEATURES if select_k_best else INPUT_DIM, OUTPUT_SIZE).to(device)
         #able to handle multi-stage classification
         criterion = nn.CrossEntropyLoss()
 

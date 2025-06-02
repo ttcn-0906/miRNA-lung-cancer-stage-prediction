@@ -41,6 +41,7 @@ def load_feature_list(feature_file: str):
     df = pd.read_csv(feature_file)
 
     feature_list = df["selected features"].values.tolist()
+    feature_list = feature_list[0:200]
 
     return feature_list
 
